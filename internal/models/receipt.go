@@ -21,6 +21,7 @@ type Item struct {
 // ProcessedReceipt represents a receipt after processing.
 // It includes a unique ID and the total points awarded based on the receipt rules.
 type ProcessedReceipt struct {
-    ID     string // Unique identifier for the processed receipt
-    Points int    // Points awarded to the receipt based on various rules
+    ID     string `json:"id"`
+    Points int    `json:"points"`
+    Hash   string `json:"hash"` // Add this line
 }

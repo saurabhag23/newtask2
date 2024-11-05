@@ -1,36 +1,48 @@
-// main.go
-// This file initializes the HTTP server for the receipt processing service.
-// It sets up the routes and starts the server on port 8080.
-
 package main
 
 import (
-	"log"
-	"net/http"
-	"os"
+    "log"
+    "net/http"
+    "os"
 
-	"github.com/gorilla/mux"
-	"github.com/saurabhag23/receipt-processor/internal/handlers"
+    "github.com/gorilla/mux"
+    "github.com/joho/godotenv"
+    "github.com/saurabhag23/receipt-processor/internal/database"
+    "github.com/saurabhag23/receipt-processor/internal/handlers"
 )
 
 func main() {
-	// Initialize a logger to output server logs to the console.
-	// The logs are prefixed with "receipt-processor: " and include timestamps.
-	logger := log.New(os.Stdout, "receipt-processor: ", log.LstdFlags)
+    // Load environment variables from a .env file if present
+    if err := godotenv.Load(); err != nil {
+        log.Println("No .env file found")
+    }
 
-	// Create a new router using Gorilla Mux for handling HTTP routes.
-	r := mux.NewRouter()
+    // Initialize database connection
+    database.Initialize()
+    defer database.Close()
 
-	// Define the HTTP route for processing receipts.
-	// This route listens for POST requests at /receipts/process and calls the ProcessReceipt handler.
-	r.HandleFunc("/receipts/process", handlers.ProcessReceipt).Methods("POST")
+	database.InitializeMongoDB()
+	defer database.DisconnectMongoDB()
+    // Create a new router
+    r := mux.NewRouter()
 
-	// Define the HTTP route for retrieving points for a specific receipt by ID.
-	// This route listens for GET requests at /receipts/{id}/points and calls the GetPoints handler.
-	r.HandleFunc("/receipts/{id}/points", handlers.GetPoints).Methods("GET")
+    // Define the HTTP route for processing receipts
+    r.HandleFunc("/receipts/process", handlers.ProcessReceipt).Methods("POST")
 
-	// Start the HTTP server on port 8080 with the configured routes.
-	// If the server encounters a fatal error, log it and exit.
-	logger.Println("Server starting on port 8080...")
-	logger.Fatal(http.ListenAndServe(":8080", r))
+    // Define the HTTP route for retrieving points for a specific receipt by ID
+    r.HandleFunc("/receipts/{id}/points", handlers.GetPoints).Methods("GET")
+
+    // Define server address and port, could be configured via environment variables
+    addr := os.Getenv("SERVER_ADDRESS")
+    port := os.Getenv("SERVER_PORT")
+    if addr == "" {
+        addr = "localhost" // Default address
+    }
+    if port == "" {
+        port = "8080" // Default port
+    }
+
+    // Start the HTTP server
+    log.Printf("Server starting on %s:%s...\n", addr, port)
+    log.Fatal(http.ListenAndServe(addr+":"+port, r))
 }
